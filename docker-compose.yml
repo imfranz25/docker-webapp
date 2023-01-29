@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  docker-app1:
+    build: docker-app/
+    depends_on:
+      - docker-task-svc1
+      - docker-holiday-svc1
+    ports:
+      - "3000:3000"
+
+  docker-task-svc1:
+    build: docker-task-svc/
+    env_file:
+      - docker-task-svc/.env
+    depends_on:
+      - docker-task-db-1
+    ports:
+      - "3001:3001"
+
+  docker-holiday-svc1:
+    build: docker-holiday-svc/
+    env_file:
+      - docker-holiday-svc/.env
+    depends_on:
+      - docker-holiday-redis-1
+    ports:
+      - "8080:8080"
+
+  docker-holiday-redis-1:
+    image: redis:alpine3.16
+    volumes:
+      - docker-holiday-svc-redis:/data
+    ports: 
+      - "3679:3679"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  docker-task-db-1:
+    image: postgres:15.1-alpine
+    environment:
+      - POSTGRES_HOST=docker-task-db-1
+      - POSTGRES_USER=me
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=postgres
+      - POSTGRES_SERVICE=postgres
+      - POSTGRES_PORT=5432
+      - DIALECT=postgres
+    volumes:
+      - docker-task-svc-postgres:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "user"]
+      interval: 30s
+      timeout: 10s
+      retries: 5 
+
+volumes:
+  docker-task-svc-postgres:
+  docker-holiday-svc-redis:
+  
